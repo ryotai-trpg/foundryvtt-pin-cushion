@@ -343,6 +343,7 @@ export class PinCushion {
         // const currentIconSelector = stripQueryStringAndHashFromPath(
         // 	explicitImageValue ? explicitImageValue : noteData.document.texture.src
         // );
+
         const currentIconSelector = stripQueryStringAndHashFromPath(explicitImageValue);
 
         // you can see this only if you have the file browser permissions
@@ -383,12 +384,13 @@ export class PinCushion {
             // */
 
             // 	// const iconSelector = html.find("select[name='icon.selected']");
-            const iconCustomSelector = html.find("input[name='icon.custom']");
+            const $html = ensureJquery(html);
+            const iconCustomSelector = $html.find("input[name='icon.custom']");
             if (iconCustomSelector?.length > 0) {
                 iconCustomSelector.val(currentIconSelector);
                 iconCustomSelector.on("change", function () {
                     const p = iconCustomSelector.parent().find(".pin-cushion-journal-icon");
-                    const valueIconSelector = html.find("select[name='icon.selected']")?.val();
+                    const valueIconSelector = $html.find("select[name='icon.selected']")?.val();
                     if (valueIconSelector) {
                         p[0].src = valueIconSelector;
                     } else {
@@ -399,7 +401,7 @@ export class PinCushion {
                 // 	// Detect and activate file-picker buttons
                 // 	//html.find("button.file-picker").on("click", app._activateFilePicker.bind(app));
                 // 	html.find("button.file-picker").each((i, button) => (button.onclick = app._activateFilePicker.bind(app)));
-                const iconSelector = html.find("select[name='icon.selected']");
+                const iconSelector = $html.find("select[name='icon.selected']");
                 // Need this...
                 if (iconSelector?.val() === "icons/svg/book.svg" && currentIconSelector) {
                     iconSelector?.val("").change();
@@ -407,14 +409,14 @@ export class PinCushion {
                 if (iconSelector?.length > 0) {
                     iconSelector.on("change", function () {
                         const p = iconCustomSelector.parent().find(".pin-cushion-journal-icon");
-                        const valueIconSelector = html.find("select[name='icon.selected']")?.val();
+                        const valueIconSelector = $html.find("select[name='icon.selected']")?.val();
                         if (valueIconSelector) {
                             p[0].src = valueIconSelector;
                         } else {
                             p[0].src = currentIconSelector;
                         }
                     });
-                    const valueIconSelector = html.find("select[name='icon.selected']")?.val();
+                    const valueIconSelector = $html.find("select[name='icon.selected']")?.val();
                     if (valueIconSelector) {
                         iconCustomSelector
                             .parent()
@@ -434,18 +436,18 @@ export class PinCushion {
             }
             // TODO BETTER MANAGEMENT
             const currentpageSelector = "";
-            const pageCustomSelector = html.find("select[name='pageId']");
+            const pageCustomSelector = $html.find("select[name='pageId']");
             // Journal Id
-            const valuejournalSelector = html.find("select[name='entryId']")?.val();
+            const valuejournalSelector = $html.find("select[name='entryId']")?.val();
             if (pageCustomSelector && valuejournalSelector) {
-                const pageSelector = html.find("select[name='pageId']");
+                const pageSelector = $html.find("select[name='pageId']");
 
                 if (pageSelector?.length > 0) {
                     pageSelector.on("change", function () {
                         const p = pageCustomSelector.parent().find(".pin-cushion-page-icon");
 
                         // Pageid
-                        const valuepageSelector = html.find("select[name='pageId']")?.val();
+                        const valuepageSelector = $html.find("select[name='pageId']")?.val();
                         if (valuepageSelector) {
                             const pageiimage = retrieveFirstImageFromJournalId(
                                 valuejournalSelector,
@@ -461,7 +463,7 @@ export class PinCushion {
                             p[0].src = currentpageSelector;
                         }
                     });
-                    const valuepageSelector = html.find("select[name='pageId']")?.val();
+                    const valuepageSelector = $html.find("select[name='pageId']")?.val();
                     const pageiimage = retrieveFirstImageFromJournalId(valuejournalSelector, valuepageSelector, true);
                     if (pageiimage) {
                         pageCustomSelector
@@ -1237,58 +1239,45 @@ Won't be used if GM or if the defaults have already been applied
         game.journal.render();
     }
 
-    static _addJournalThumbnail(app, html, data) {
-        if (
-            (game.user.isGM && game.settings.get(CONSTANTS.MODULE_ID, "enableJournalThumbnailForGMs")) ||
-            (!game.user.isGM && game.settings.get(CONSTANTS.MODULE_ID, "enableJournalThumbnailForPlayers"))
-        ) {
-            app.documents.forEach((j) => {
-                const htmlEntry = html.find(`.directory-item.document[data-document-id="${j.id}"]`);
-                if (htmlEntry.length !== 1) {
-                    return;
-                }
-                // const journalEntryImage = stripQueryStringAndHashFromPath(j.data.img);
-                // 	htmlEntry.prepend(`<img class="pin-cushion-thumbnail sidebar-image journal-entry-image" src="${journalEntryImage}" title="${j.name}"
-                //   alt='Journal Entry Thumbnail'>`);
-                const journalEntryImage = retrieveFirstImageFromJournalId(j.id, undefined, false);
-                if (!journalEntryImage) {
-                    return;
-                }
-                let thumbnail = null;
-                if (journalEntryImage.endsWith(".pdf")) {
-                    // thumbnail = $(
-                    // 	`
-                    // 	<object data="${journalEntryImage}" type="application/pdf" class="pin-cushion-thumbnail sidebar-image journal-entry-image">
-                    // 		<embed class="pin-cushion-thumbnail sidebar-image journal-entry-image" src="${journalEntryImage}" type="application/pdf">
-                    // 			<p>This browser does not support PDFs. Please download the PDF to view it: <a href="${journalEntryImage}">Download PDF</a>.</p>
-                    // 		</embed>
-                    // 	</object>
-                    // 	`
-                    // );
-                    thumbnail = $(
-                        `<img class="pin-cushion-thumbnail sidebar-image journal-entry-image" src="${CONSTANTS.PATH_PDF_THUMBNAIL}" title="${j.name}" alt='Journal Entry Thumbnail'>`,
-                    );
-                } else {
-                    thumbnail = $(
-                        `<img class="pin-cushion-thumbnail sidebar-image journal-entry-image" src="${journalEntryImage}" title="${j.name}" alt='Journal Entry Thumbnail'>`,
-                    );
-                }
-                switch (game.settings.get(CONSTANTS.MODULE_ID, "journalThumbnailPosition")) {
-                    case "right": {
-                        htmlEntry.append(thumbnail);
-                        break;
-                    }
-                    case "left": {
-                        htmlEntry.prepend(thumbnail);
-                        break;
-                    }
-                    default: {
-                        Logger.warn(`Must set 'right' or 'left' for sidebar thumbnail image`);
-                    }
-                }
-            });
-        }
+static _addJournalThumbnail(app, html, data) {
+  const isGM = game.user.isGM;
+  const enabledForGM = game.settings.get(CONSTANTS.MODULE_ID, "enableJournalThumbnailForGMs");
+  const enabledForPlayers = game.settings.get(CONSTANTS.MODULE_ID, "enableJournalThumbnailForPlayers");
+
+  if ((isGM && enabledForGM) || (!isGM && enabledForPlayers)) {
+    // Zbieramy dokumenty z kolekcji aplikacji
+    const journals = app.collection?.contents ?? []; // app.collection to JournalEntry collection
+
+    for (const journal of journals) {
+          const $html = ensureJquery(html);
+      const htmlEntry =  $html.find(`.directory-item.document[data-document-id="${journal.id}"]`);
+      if (htmlEntry.length !== 1) continue;
+
+      const journalEntryImage = retrieveFirstImageFromJournalId(journal.id, void 0, false);
+      if (!journalEntryImage) continue;
+
+      let thumbnail = null;
+      if (journalEntryImage.endsWith(".pdf")) {
+        thumbnail = $(`<img class="pin-cushion-thumbnail sidebar-image journal-entry-image" src="${CONSTANTS.PATH_PDF_THUMBNAIL}" title="${journal.name}" alt="Journal Entry Thumbnail">`);
+      } else {
+        thumbnail = $(`<img class="pin-cushion-thumbnail sidebar-image journal-entry-image" src="${journalEntryImage}" title="${journal.name}" alt="Journal Entry Thumbnail">`);
+      }
+
+      const position = game.settings.get(CONSTANTS.MODULE_ID, "journalThumbnailPosition");
+      switch (position) {
+        case "right":
+          htmlEntry.append(thumbnail);
+          break;
+        case "left":
+          htmlEntry.prepend(thumbnail);
+          break;
+        default:
+          Logger.warn(`Must set 'right' or 'left' for sidebar thumbnail image`);
+      }
     }
+  }
+}
+
 
     static _deleteJournalDirectoryPagesEntry() {
         if (game.settings.get(CONSTANTS.MODULE_ID, "enableJournalDirectoryPages")) {
@@ -1412,4 +1401,14 @@ Won't be used if GM or if the defaults have already been applied
     //     PinCushionPixiHelpers.drawTooltipPixi(note);
     //     return wrapped(...args);
     // }
+}
+function ensureJquery(html) {
+  // If it's already jQuery, return it
+  if (html instanceof jQuery) return html;
+
+  // If it's an HTMLElement, convert it
+  if (html instanceof HTMLElement) return $(html);
+
+  // If it's something else, wrap it anyway (fallback)
+  return $(html);
 }

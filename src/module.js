@@ -80,22 +80,41 @@ Hooks.once("init", function () {
     );
 
     const enablePlayerIconAutoOverride = game.settings.get(CONSTANTS.MODULE_ID, "playerIconAutoOverride");
-    if (enablePlayerIconAutoOverride) {
-        libWrapper.register(
-            CONSTANTS.MODULE_ID,
-            "NoteDocument.prototype.prepareData",
-            PinCushion._onPrepareNoteData,
-            "WRAPPER",
-        );
-    }
+const isV13 = parseInt(game.version.split('.')[0]) >= 9;
 
-    libWrapper.register(CONSTANTS.MODULE_ID, "NoteConfig.prototype.getData", PinCushion._noteConfigGetData);
+// W v13 metoda prepareData jest na NoteDocument, w v12 na Note
+const prepareDataMethod = isV13 ? "NoteDocument.prototype.prepareData" : "Note.prototype.prepareData";
 
+// W v13 metoda getData na NoteConfig może nie istnieć — w takim wypadku pominąć rejestrację
+// albo zarejestrować tylko _getSubmitData jeśli jest dostępne
+const noteConfigGetDataMethod = isV13 && ("getData" in NoteConfig.prototype) ? "NoteConfig.prototype.getData" : null;
+const noteConfigGetSubmitDataMethod = isV13 && ("_getSubmitData" in NoteConfig.prototype) ? "NoteConfig.prototype._getSubmitData" : null;
+
+if (enablePlayerIconAutoOverride) {
     libWrapper.register(
         CONSTANTS.MODULE_ID,
-        "NoteConfig.prototype._getSubmitData",
-        PinCushion._noteConfigGetSubmitData,
+        prepareDataMethod,
+        PinCushion._onPrepareNoteData,
+        "WRAPPER"
     );
+}
+
+if (noteConfigGetDataMethod) {
+    libWrapper.register(
+        CONSTANTS.MODULE_ID,
+        noteConfigGetDataMethod,
+        PinCushion._noteConfigGetData
+    );
+}
+
+if (noteConfigGetSubmitDataMethod) {
+    libWrapper.register(
+        CONSTANTS.MODULE_ID,
+        noteConfigGetSubmitDataMethod,
+        PinCushion._noteConfigGetSubmitData
+    );
+}
+
 });
 /* ------------------------------------ */
 /* Setup module							*/
@@ -159,12 +178,20 @@ Hooks.once("ready", function () {
  * @param {object] data       The object of data used when rendering the application (from NoteConfig#getData)
  */
 Hooks.on("renderNoteConfig", async (app, html, noteData) => {
-    if (!app.object.flags[CONSTANTS.MODULE_ID]) {
+    let noteElement;
+      const $html = ensureJquery(html);
+    if(game.release.generation < 13){
+        noteElement= app.object
+    }
+    else{
+        noteElement = app.document
+    }
+    if (!noteElement.flags[CONSTANTS.MODULE_ID]) {
         // TODO WHY IS THIS NOT WORKING ??
         // setProperty(app.object.flags[CONSTANTS.MODULE_ID], {});
-        app.object.flags[CONSTANTS.MODULE_ID] = {};
+        noteElement.flags[CONSTANTS.MODULE_ID] = {};
     }
-    let entity = app.object.flags[CONSTANTS.MODULE_ID] || {};
+    let entity = noteElement.flags[CONSTANTS.MODULE_ID] || {};
 
     // TODO THIS CODE CAN B DONE MUCH BETTER...
     const showJournalImageByDefault = game.settings.get(CONSTANTS.MODULE_ID, "showJournalImageByDefault");
@@ -172,12 +199,12 @@ Hooks.on("renderNoteConfig", async (app, html, noteData) => {
     if (
         showJournalImageByDefault &&
         noteData.document.entryId &&
-        !app.object.getFlag(CONSTANTS.MODULE_ID, CONSTANTS.FLAGS.CUSHION_ICON)
+        !noteElement.getFlag(CONSTANTS.MODULE_ID, CONSTANTS.FLAGS.CUSHION_ICON)
     ) {
         // Journal id
         const journal = game.journal.get(noteData.document.entryId);
         if (journal) {
-            const journalEntryImage = retrieveFirstImageFromJournalId(journal.id, app.object?.pageId, false);
+            const journalEntryImage = retrieveFirstImageFromJournalId(journal.id, noteElement?.pageId, false);
             if (journalEntryImage) {
                 foundry.utils.setProperty(
                     noteData.document.texture,
@@ -195,8 +222,8 @@ Hooks.on("renderNoteConfig", async (app, html, noteData) => {
     let tmp = undefined;
     if (noteData.icon.custom) {
         tmp = stripQueryStringAndHashFromPath(noteData.icon.custom);
-    } else if (app.object.texture.src) {
-        tmp = stripQueryStringAndHashFromPath(app.object.texture.src);
+    } else if (noteElement.texture.src) {
+        tmp = stripQueryStringAndHashFromPath(noteElement.texture.src);
     } else if (noteData.document.texture.src) {
         tmp = stripQueryStringAndHashFromPath(noteData.document.texture.src);
     }
@@ -211,21 +238,21 @@ Hooks.on("renderNoteConfig", async (app, html, noteData) => {
         tmp = stripQueryStringAndHashFromPath(noteData.document.texture.src);
     }
     const pinCushionIcon = foundry.utils.getProperty(
-        app.object.flags,
+        noteElement.flags,
         `${CONSTANTS.MODULE_ID}.${CONSTANTS.FLAGS.CUSHION_ICON}`,
     );
     if (pinCushionIcon) {
         tmp = stripQueryStringAndHashFromPath(pinCushionIcon);
     }
 
-    PinCushion._replaceIconSelector(app, html, noteData, tmp);
+    PinCushion._replaceIconSelector(app, $html, noteData, tmp);
     // Causes a bug when attempting to place an journal entry onto the canvas in Foundry 9.
     // await app.object.setFlag(CONSTANTS.MODULE_ID, CONSTANTS.FLAGS.CUSHION_ICON, tmp);
-    foundry.utils.setProperty(app.object.flags[CONSTANTS.MODULE_ID], CONSTANTS.FLAGS.CUSHION_ICON, tmp);
+    foundry.utils.setProperty(noteElement.flags[CONSTANTS.MODULE_ID], CONSTANTS.FLAGS.CUSHION_ICON, tmp);
 
     const enableNoteGM = game.settings.get(CONSTANTS.MODULE_ID, "noteGM");
     if (enableNoteGM) {
-        PinCushion._addNoteGM(app, html, noteData);
+        PinCushion._addNoteGM(app, $html, noteData);
     }
 
     const enableJournalAnchorLink = game.settings.get(CONSTANTS.MODULE_ID, "enableJournalAnchorLink");
@@ -263,7 +290,8 @@ Hooks.on("renderNoteConfig", async (app, html, noteData) => {
 				</select>
 			</div>
 		</div>`);
-        const pageid = html.find("select[name='pageId']");
+
+        const pageid = $html.find("select[name='pageId']");
         pageid.parent().parent().after(select);
 
         // on change of page or journal entry
@@ -285,7 +313,7 @@ Hooks.on("renderNoteConfig", async (app, html, noteData) => {
                 "new innerHtml" + app.form.elements[`flags.anchor.slug`].innerHTML,
             );
         }
-        html.find("select[name='entryId']").change(_updateSectionList);
+        $html.find("select[name='entryId']").change(_updateSectionList);
         pageid.change(_updateSectionList);
     }
 
@@ -328,11 +356,11 @@ Hooks.on("renderNoteConfig", async (app, html, noteData) => {
     // General
     // ====================================
     const showImageExplicitSource = stripQueryStringAndHashFromPath(
-        app.object.getFlag(CONSTANTS.MODULE_ID, CONSTANTS.FLAGS.SHOW_IMAGE_EXPLICIT_SOURCE) ?? "",
+        noteElement.getFlag(CONSTANTS.MODULE_ID, CONSTANTS.FLAGS.SHOW_IMAGE_EXPLICIT_SOURCE) ?? "",
     );
-    const showImage = app.object.getFlag(CONSTANTS.MODULE_ID, CONSTANTS.FLAGS.SHOW_IMAGE) ?? false;
-    const pinIsTransparent = app.object.getFlag(CONSTANTS.MODULE_ID, CONSTANTS.FLAGS.PIN_IS_TRANSPARENT) ?? false;
-    const showOnlyToGM = app.object.getFlag(CONSTANTS.MODULE_ID, CONSTANTS.FLAGS.SHOW_ONLY_TO_GM) ?? false;
+    const showImage =  noteElement.getFlag(CONSTANTS.MODULE_ID, CONSTANTS.FLAGS.SHOW_IMAGE) ?? false;
+    const pinIsTransparent =  noteElement.getFlag(CONSTANTS.MODULE_ID, CONSTANTS.FLAGS.PIN_IS_TRANSPARENT) ?? false;
+    const showOnlyToGM =  noteElement.getFlag(CONSTANTS.MODULE_ID, CONSTANTS.FLAGS.SHOW_ONLY_TO_GM) ?? false;
 
     const hasBackground =
         (app.document
@@ -635,55 +663,19 @@ Hooks.on("renderNoteConfig", async (app, html, noteData) => {
             tooltipShowDescription: tooltipShowDescription,
             tooltipShowTitle: tooltipShowTitle,
         },
-        app.object.flags[CONSTANTS.MODULE_ID] || {},
+         noteElement.flags[CONSTANTS.MODULE_ID] || {},
     );
     // pinCushionData.entity = JSON.stringify(entity);
     // eslint-disable-next-line no-undef
     let noteHtml = await renderTemplate(`modules/${CONSTANTS.MODULE_ID}/templates/note-config.html`, pinCushionData);
 
-    if ($(".sheet-tabs", html).length) {
-        $(".sheet-tabs", html).append(
-            $("<a>")
-                .addClass("item")
-                .attr("data-tab", "pincushion")
-                .html('<i class="fas fa-map-marker-plus"></i> Pin Cushion (GM Only)'),
-        );
-        $("<div>")
-            .addClass("tab action-sheet")
-            .attr("data-tab", "pincushion")
-            .html(noteHtml)
-            .insertAfter($(".tab:last", html));
-    } else {
-        let root = $("form", html);
-        if (root.length === 0) {
-            root = html;
-        }
-        let basictab = $("<div>").addClass("tab").attr("data-tab", "basic");
-        $("> *:not(button):not(footer)", root).each(function () {
-            basictab.append(this);
-        });
+ const body = $html.find(".form-body.standard-form.scrollable");
 
-        $(root)
-            .prepend($("<div>").addClass("tab action-sheet").attr("data-tab", "pincushion").html(noteHtml))
-            .prepend(basictab)
-            .prepend(
-                $("<nav>")
-                    .addClass("sheet-tabs tabs")
-                    .append(
-                        $("<a>")
-                            .addClass("item active")
-                            .attr("data-tab", "basic")
-                            .html('<i class="fas fa-university"></i> Basic'),
-                    )
-                    .append(
-                        $("<a>")
-                            .addClass("item")
-                            .attr("data-tab", "pincushion")
-                            .html('<i class="fas fa-map-marker-plus"></i> Pin Cushion (GM Only)'),
-                    ),
-            );
-        // }
-    }
+  if (body.length) {
+    body.append(noteHtml);
+  } else {
+    console.warn("form-body container not found in NoteConfig HTML");
+  }
 
     // START LISTENERS
 
@@ -691,14 +683,14 @@ Hooks.on("renderNoteConfig", async (app, html, noteData) => {
     // 	(i, button) => (button.onclick = app._activateFilePicker.bind(app))
     // );
 
-    $('button[data-target="flags.pin-cushion.showImageExplicitSource"]', html).on(
-        "click",
-        app._activateFilePicker.bind(app),
-    );
+   // $('button[data-target="flags.pin-cushion.showImageExplicitSource"]', html).on(
+  //     "click",
+ ///       app._activateFilePicker.bind(app),
+//    );
 
-    $('button[data-target="flags.pin-cushion.PlayerIconPath"]', html).on("click", app._activateFilePicker.bind(app));
+ //   $('button[data-target="flags.pin-cushion.PlayerIconPath"]', html).on("click", app._activateFilePicker.bind(app));
 
-    const iconCustomSelectorExplicit = html.find(
+    const iconCustomSelectorExplicit = $html.find(
         `input[name='flags.${CONSTANTS.MODULE_ID}.${CONSTANTS.FLAGS.SHOW_IMAGE_EXPLICIT_SOURCE}']`,
     );
     if (iconCustomSelectorExplicit?.length > 0) {
@@ -708,7 +700,7 @@ Hooks.on("renderNoteConfig", async (app, html, noteData) => {
         });
     }
 
-    const iconCustomPlayerIconPath = html.find(
+    const iconCustomPlayerIconPath = $html.find(
         `input[name='flags.${CONSTANTS.MODULE_ID}.${CONSTANTS.FLAGS.PLAYER_ICON_PATH}']`,
     );
     if (iconCustomPlayerIconPath?.length > 0) {
@@ -718,13 +710,13 @@ Hooks.on("renderNoteConfig", async (app, html, noteData) => {
         });
     }
 
-    const iconCustomPageIcon = html.find(`select[name='pageId']`);
+    const iconCustomPageIcon = $html.find(`select[name='pageId']`);
     if (iconCustomPageIcon?.length > 0) {
         iconCustomPageIcon.on("change", function () {
             const p = iconCustomPageIcon.parent().find(".pin-cushion-page-icon");
             const pageId = this.value;
-            if (html.find(`select[name='entryId']`).length > 0) {
-                const entryId = html.find(`select[name='entryId']`)[0].value;
+            if ($html.find(`select[name='entryId']`).length > 0) {
+                const entryId = $html.find(`select[name='entryId']`)[0].value;
                 const firstImageFromPage = retrieveFirstImageFromJournalId(entryId, pageId, true);
                 if (firstImageFromPage) {
                     p[0].src = firstImageFromPage;
@@ -734,14 +726,13 @@ Hooks.on("renderNoteConfig", async (app, html, noteData) => {
     }
 
     // ENDS LISTENERS
-
-    app.options.tabs = [{ navSelector: ".tabs", contentSelector: "form", initial: "basic" }];
-    app.options.height = "auto";
-    app._tabs = app._createTabHandlers();
-    const el = html[0];
-    app._tabs.forEach((t) => t.bind(el));
-
-    app.setPosition();
+   // app.options.tabs = [{ navSelector: ".tabs", contentSelector: "form", initial: "basic" }];
+    //app.options.height = "auto";
+    //app._tabs = app._createTabHandlers();
+    //const el = $html[0];
+   // app._tabs.forEach((t) => t.bind(el));
+//
+ //   app.setPosition();
     /*
 	// Force a recalculation of the height
 	if (!app._minimized) {
@@ -757,7 +748,8 @@ Hooks.on("renderNoteConfig", async (app, html, noteData) => {
  */
 Hooks.on("renderHeadsUpDisplay", (app, html, data) => {
     // VERSION 1 TOOLTIP
-    html.append(`<template id="pin-cushion-hud"></template>`);
+      const $html = ensureJquery(html);
+    $html.append(`<template id="pin-cushion-hud"></template>`);
     canvas.hud.pinCushion = new PinCushionHUD();
     // VERSION 2 TOOLTIP
     // html.append(`<template id="pin-cushion-hud-v2"></template>`);
@@ -968,3 +960,13 @@ Hooks.on("activateNote", (note, options) => {
         // options.anchor = note.document.flags.anchor?.slug;
     }
 });
+function ensureJquery(html) {
+  // If it's already jQuery, return it
+  if (html instanceof jQuery) return html;
+
+  // If it's an HTMLElement, convert it
+  if (html instanceof HTMLElement) return $(html);
+
+  // If it's something else, wrap it anyway (fallback)
+  return $(html);
+}
