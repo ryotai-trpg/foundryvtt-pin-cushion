@@ -1239,45 +1239,48 @@ Won't be used if GM or if the defaults have already been applied
         game.journal.render();
     }
 
-static _addJournalThumbnail(app, html, data) {
-  const isGM = game.user.isGM;
-  const enabledForGM = game.settings.get(CONSTANTS.MODULE_ID, "enableJournalThumbnailForGMs");
-  const enabledForPlayers = game.settings.get(CONSTANTS.MODULE_ID, "enableJournalThumbnailForPlayers");
+    static _addJournalThumbnail(app, html, data) {
+        const isGM = game.user.isGM;
+        const enabledForGM = game.settings.get(CONSTANTS.MODULE_ID, "enableJournalThumbnailForGMs");
+        const enabledForPlayers = game.settings.get(CONSTANTS.MODULE_ID, "enableJournalThumbnailForPlayers");
 
-  if ((isGM && enabledForGM) || (!isGM && enabledForPlayers)) {
-    // Zbieramy dokumenty z kolekcji aplikacji
-    const journals = app.collection?.contents ?? []; // app.collection to JournalEntry collection
+        if ((isGM && enabledForGM) || (!isGM && enabledForPlayers)) {
+            // Zbieramy dokumenty z kolekcji aplikacji
+            const journals = app.collection?.contents ?? []; // app.collection to JournalEntry collection
 
-    for (const journal of journals) {
-          const $html = ensureJquery(html);
-      const htmlEntry =  $html.find(`.directory-item.document[data-document-id="${journal.id}"]`);
-      if (htmlEntry.length !== 1) continue;
+            for (const journal of journals) {
+                const $html = ensureJquery(html);
+                const htmlEntry = $html.find(`.directory-item.document[data-document-id="${journal.id}"]`);
+                if (htmlEntry.length !== 1) continue;
 
-      const journalEntryImage = retrieveFirstImageFromJournalId(journal.id, void 0, false);
-      if (!journalEntryImage) continue;
+                const journalEntryImage = retrieveFirstImageFromJournalId(journal.id, void 0, false);
+                if (!journalEntryImage) continue;
 
-      let thumbnail = null;
-      if (journalEntryImage.endsWith(".pdf")) {
-        thumbnail = $(`<img class="pin-cushion-thumbnail sidebar-image journal-entry-image" src="${CONSTANTS.PATH_PDF_THUMBNAIL}" title="${journal.name}" alt="Journal Entry Thumbnail">`);
-      } else {
-        thumbnail = $(`<img class="pin-cushion-thumbnail sidebar-image journal-entry-image" src="${journalEntryImage}" title="${journal.name}" alt="Journal Entry Thumbnail">`);
-      }
+                let thumbnail = null;
+                if (journalEntryImage.endsWith(".pdf")) {
+                    thumbnail = $(
+                        `<img class="pin-cushion-thumbnail sidebar-image journal-entry-image" src="${CONSTANTS.PATH_PDF_THUMBNAIL}" title="${journal.name}" alt="Journal Entry Thumbnail">`,
+                    );
+                } else {
+                    thumbnail = $(
+                        `<img class="pin-cushion-thumbnail sidebar-image journal-entry-image" src="${journalEntryImage}" title="${journal.name}" alt="Journal Entry Thumbnail">`,
+                    );
+                }
 
-      const position = game.settings.get(CONSTANTS.MODULE_ID, "journalThumbnailPosition");
-      switch (position) {
-        case "right":
-          htmlEntry.append(thumbnail);
-          break;
-        case "left":
-          htmlEntry.prepend(thumbnail);
-          break;
-        default:
-          Logger.warn(`Must set 'right' or 'left' for sidebar thumbnail image`);
-      }
+                const position = game.settings.get(CONSTANTS.MODULE_ID, "journalThumbnailPosition");
+                switch (position) {
+                    case "right":
+                        htmlEntry.append(thumbnail);
+                        break;
+                    case "left":
+                        htmlEntry.prepend(thumbnail);
+                        break;
+                    default:
+                        Logger.warn(`Must set 'right' or 'left' for sidebar thumbnail image`);
+                }
+            }
+        }
     }
-  }
-}
-
 
     static _deleteJournalDirectoryPagesEntry() {
         if (game.settings.get(CONSTANTS.MODULE_ID, "enableJournalDirectoryPages")) {
@@ -1403,12 +1406,12 @@ static _addJournalThumbnail(app, html, data) {
     // }
 }
 function ensureJquery(html) {
-  // If it's already jQuery, return it
-  if (html instanceof jQuery) return html;
+    // If it's already jQuery, return it
+    if (html instanceof jQuery) return html;
 
-  // If it's an HTMLElement, convert it
-  if (html instanceof HTMLElement) return $(html);
+    // If it's an HTMLElement, convert it
+    if (html instanceof HTMLElement) return $(html);
 
-  // If it's something else, wrap it anyway (fallback)
-  return $(html);
+    // If it's something else, wrap it anyway (fallback)
+    return $(html);
 }

@@ -203,6 +203,7 @@
         "PageSection": "Page Section:",
         "TooltipCustomDescription": "Tooltip Custom Description. This text will show up only if no journal is linked to the note",
         "TooltipShowDescription": "Show Tooltip Description ?",
-        "TooltipShowTitle": "Show Tooltip Title ?"
+        "TooltipShowTitle": "Show Tooltip Title ?",
+        "UIWarningLackOfFlags" :"Note do not contain module flags, edit it for proper HUD display"
     }
 }
