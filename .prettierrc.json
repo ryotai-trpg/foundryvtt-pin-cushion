@@ -16,6 +16,18 @@
             }
         },
         {
+            "files": ["*.json"],
+            "options": {
+                "tabWidth": 2
+            }
+        },
+        {
+            "files": ["*.js", "*.ts"],
+            "options": {
+                "tabWidth": 2
+            }
+        },
+        {
             "files": "*.html",
             "options": {
                 "requirePragma": false,
