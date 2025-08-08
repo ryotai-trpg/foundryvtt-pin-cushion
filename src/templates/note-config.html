@@ -272,27 +272,28 @@
         </div>
     </div>
     <hr>
+    {{#if showImage}}
     <div class="form-group">
         <label
             for="flags.pin-cushion.showImageExplicitSource"
             >{{ localize "pin-cushion.ShowImageExplicitSource"}}
         </label>
         <div class="form-fields">
-            <img class="pin-cushion-explicit-icon" src="{{showImageExplicitSource}}" />
-            <input
-                type="text"
-                name="flags.pin-cushion.showImageExplicitSource"
-                title="{{localize "pin-cushion.ShowImageExplicitSource"}}"
-                class="icon-path"
-                value="{{showImageExplicitSource}}"
-                placeholder="/icons/example.svg"
-                data-dtype="String"
-                {{#if noUploadFile}} readonly="true" {{/if}}
-                >
-            </input>
-            {{#if yesUploadFile}}
-                {{filePicker type="image" target="flags.pin-cushion.showImageExplicitSource"}}
-            {{/if}}
+<img class="pin-cushion-explicit-icon" src="{{showImageExplicitSource}}" />
+
+
+
+
+  <file-picker
+      type="image"
+      name="flags.pin-cushion.showImageExplicitSource"
+      value="{{showImageExplicitSource}}"
+      placeholder="/icons/example.svg"
+      title="{{localize "pin-cushion.ShowImageExplicitSource"}}"
+      class="icon-path"
+      {{#if noUploadFile}} readonly="true" {{/if}}>
+  </file-picker>
+{{/if}}
         </div>
     </div>
 </fieldset>
@@ -366,3 +367,4 @@
     </div>
     {{/if}}
 </fieldset>
+
