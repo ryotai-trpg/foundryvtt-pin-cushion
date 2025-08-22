@@ -91,7 +91,13 @@ export const registerSettings = function () {
         scope: "world",
         type: String,
         choices: () => {
-            const folders = game.journal.directory.folders.sort((a, b) => a.name.localeCompare(b.name));
+          let folders;
+          if(game.release.generation < 13){
+            folders = game.journal.directory.folders.sort((a, b) => a.name.localeCompare(b.name));
+          }
+          else{
+            folders = Array.from(game.journal.directory.collection.folders.values()).sort((a, b) => a.name.localeCompare(b.name));
+          }
             const arrObj = {};
             arrObj[""] = "Select a journal folder";
             Object.entries(folders).reduce((folder, [k, v]) => {
