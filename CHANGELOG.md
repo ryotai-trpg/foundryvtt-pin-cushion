@@ -1,6 +1,7 @@
-### 13.0.0 [BETA]
+### 13.0.0-13.0.1 [BETA]
 
 - V13 update ty to @bb46003 and the PR https://github.com/p4535992/foundryvtt-pin-cushion/pull/111
+- V13 update ty to @bb46003 and the PR https://github.com/p4535992/foundryvtt-pin-cushion/pull/113
 
 ### 12.0.3
 
