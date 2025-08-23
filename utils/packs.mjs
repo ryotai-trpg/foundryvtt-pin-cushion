@@ -98,8 +98,8 @@ function cleanPackEntry(data, { clearSourceId=true, ownership=0 }={}) {
   if ( data.system?.duration?.value === "0" ) data.system.duration.value = "";
   if ( data.system?.target?.value === 0 ) data.system.target.value = null;
   if ( data.system?.target?.width === 0 ) data.system.target.width = null;
-  if ( data.system?.range?.value === 0 ) data.system.range.value = null;
-  if ( data.system?.range?.long === 0 ) data.system.range.long = null;
+  //if ( data.system?.range?.value === 0 ) data.system.range.value = null;
+ // if ( data.system?.range?.long === 0 ) data.system.range.long = null;
   if ( data.system?.uses?.value === 0 ) data.system.uses.value = null;
   if ( data.system?.uses?.max === "0" ) data.system.duration.value = "";
   if ( data.system?.save?.dc === 0 ) data.system.save.dc = null;
