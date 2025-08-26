@@ -2,7 +2,7 @@
   "name": "pin-cushion",
   "title": "Pin Cushion",
   "description": "Provides additional functionality around Map Pins",
-  "version": "13.0.1",
+  "version": "13.0.2",
   "main": "module.js",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
