@@ -38,13 +38,20 @@ export class PinCushion {
         const defaultFolder = game.settings.get(CONSTANTS.MODULE_ID, "defaultJournalFolder");
 
         const specificFolder = game.settings.get(CONSTANTS.MODULE_ID, "specificFolder");
+        let jurnalFolderAdress;
+        if(game.release.generation < 13){
+          jurnalFolderAdress = game.journal.directory.folders;
+           }
+        else{
+          jurnalFolderAdress = game.journal.folders.contents;
+        }
         const specificFolderObj =
-            game.journal.directory.folders.find((f) => f.name === specificFolder || f.id === specificFolder) ??
-            game.journal.directory.folders[Number(specificFolder)] ??
+            jurnalFolderAdress.find((f) => f.name === specificFolder || f.id === specificFolder) ??
+            jurnalFolderAdress[Number(specificFolder)] ??
             undefined;
         const specificFolderName = specificFolderObj ? specificFolderObj.name : "";
 
-        const folders = game.journal.directory.folders
+        const folders = jurnalFolderAdress
             .sort((a, b) => a.name.localeCompare(b.name))
             .filter((folder) => folder.displayed)
             .map((folder) => `<option value="${folder.id}">${folder.name}</option>`)
@@ -272,17 +279,24 @@ export class PinCushion {
      */
     static getFolder(name, setting, folderName) {
         name = name ?? game.user.name;
+         let jurnalFolderAdress;
+        if(game.release.generation < 13){
+          jurnalFolderAdress = game.journal.directory.folders;
+           }
+        else{
+          jurnalFolderAdress = game.journal.folders.contents;
+        }
         switch (setting) {
             // No target folder set
             case "none":
                 return undefined;
             // Target folder should match the user's name
             case "perUser":
-                return game.journal.directory.folders.find((f) => f.name === name)?.id ?? undefined;
+                return jurnalFolderAdress.find((f) => f.name === name)?.id ?? undefined;
             case "specificFolder":
                 return (
-                    game.journal.directory.folders.find((f) => f.name === folderName || f.id === folderName)?.id ??
-                    game.journal.directory.folders[Number(folderName)]?.id ??
+                    jurnalFolderAdress.find((f) => f.name === folderName || f.id === folderName)?.id ??
+                    jurnalFolderAdress[Number(folderName)]?.id ??
                     undefined
                 );
             default:
